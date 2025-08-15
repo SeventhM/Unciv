@@ -219,8 +219,8 @@ class CityStateFunctions(val civInfo: Civilization) {
     fun getProtectorCivs() : List<Civilization> {
         if(civInfo.isMajorCiv()) return emptyList()
         return civInfo.diplomacy.values
-            .filter{ !it.otherCiv().isDefeated() && it.diplomaticStatus == DiplomaticStatus.Protector }
-            .map{ it.otherCiv() }
+            .filter{ !it.otherCiv.isDefeated() && it.diplomaticStatus == DiplomaticStatus.Protector }
+            .map{ it.otherCiv }
     }
 
     fun addProtectorCiv(otherCiv: Civilization) {
@@ -281,7 +281,7 @@ class CityStateFunctions(val civInfo: Civilization) {
         if (!civInfo.isCityState) return
         
         val maxInfluence = civInfo.diplomacy
-            .filter { it.value.otherCiv().isMajorCiv() && !it.value.otherCiv().isDefeated() }
+            .filter { it.value.otherCiv.isMajorCiv() && !it.value.otherCiv.isDefeated() }
             .maxByOrNull { it.value.getInfluence() }
         if (maxInfluence != null && maxInfluence.value.getInfluence() >= 60) {
             newAllyName = maxInfluence.key

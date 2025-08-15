@@ -335,11 +335,11 @@ class Civilization : IsPartOfGameInfoSerialization {
      *  for major civs, but **will** do so for city-states after some gameplay.
      */
     @Readonly
-    fun getKnownCivs() = diplomacy.values.asSequence().map { it.otherCiv() }
+    fun getKnownCivs() = diplomacy.values.asSequence().map { it.otherCiv }
         .filter { !it.isDefeated() && !it.isSpectator() }
 
     @Readonly
-    fun getKnownCivsWithSpectators() = diplomacy.values.asSequence().map { it.otherCiv() }
+    fun getKnownCivsWithSpectators() = diplomacy.values.asSequence().map { it.otherCiv }
         .filter { !it.isDefeated() }
 
 
@@ -669,8 +669,8 @@ class Civilization : IsPartOfGameInfoSerialization {
     @Readonly fun getEra(): Era = tech.era
     @Readonly fun getEraNumber(): Int = getEra().eraNumber
     @Readonly fun isAtWarWith(otherCiv: Civilization) = diplomacyFunctions.isAtWarWith(otherCiv)
-    @Readonly fun isAtWar() = diplomacy.values.any { it.diplomaticStatus == DiplomaticStatus.War && !it.otherCiv().isDefeated() }
-    @Readonly fun getCivsAtWarWith() = diplomacy.values.filter { it.diplomaticStatus == DiplomaticStatus.War && !it.otherCiv().isDefeated() }.map { it.otherCiv() }
+    @Readonly fun isAtWar() = diplomacy.values.any { it.diplomaticStatus == DiplomaticStatus.War && !it.otherCiv.isDefeated() }
+    @Readonly fun getCivsAtWarWith() = diplomacy.values.filter { it.diplomaticStatus == DiplomaticStatus.War && !it.otherCiv.isDefeated() }.map { it.otherCiv }
 
 
     /**
@@ -976,8 +976,8 @@ class Civilization : IsPartOfGameInfoSerialization {
         for (diplomacyManager in diplomacy.values) {
             diplomacyManager.trades.clear()
             diplomacyManager.otherCivDiplomacy().trades.clear()
-            for (tradeRequest in diplomacyManager.otherCiv().tradeRequests.filter { it.requestingCiv == civName })
-                diplomacyManager.otherCiv().tradeRequests.remove(tradeRequest) // it  would be really weird to get a trade request from a dead civ
+            for (tradeRequest in diplomacyManager.otherCiv.tradeRequests.filter { it.requestingCiv == civName })
+                diplomacyManager.otherCiv.tradeRequests.remove(tradeRequest) // it  would be really weird to get a trade request from a dead civ
         }
         if (gameInfo.isEspionageEnabled())
             espionageManager.removeAllSpies()
