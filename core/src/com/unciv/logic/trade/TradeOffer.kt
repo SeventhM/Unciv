@@ -26,6 +26,8 @@ data class TradeOffer(val name: String, val type: TradeOfferType, var amount: In
 
     constructor() : this("", TradeOfferType.Gold, duration = -1) // so that the json deserializer can work
 
+    //TODO lateinit var civ: Civilization
+    
     @Suppress("CovariantEquals", "WrongEqualsTypeParameter")    // This is an overload, not an override of the built-in equals(Any?)
     @Readonly
     fun equals(offer: TradeOffer): Boolean {

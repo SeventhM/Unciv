@@ -79,6 +79,8 @@ class TradeRequest : IsPartOfGameInfoSerialization {
     
     lateinit var requestingCiv: String
 
+    //TODO lateinit var requestingCivObject: Civilization
+
     /** Their offers are what they offer us, and our offers are what they want in return */
     lateinit var trade: Trade
 

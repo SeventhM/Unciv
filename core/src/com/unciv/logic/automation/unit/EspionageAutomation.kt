@@ -68,7 +68,7 @@ class EspionageAutomation(val civInfo: Civilization) {
      * Moves the spy to a random city-state
      */
     private fun automateSpyRigElection(spy: Spy): Boolean {
-        val cityToMoveTo = cityStatesToRig.flatMap { it.cities }.filter { !it.isBeingRazed && spy.canMoveTo(it) && (it.civ.getDiplomacyManager(civInfo)!!.getInfluence() < 150 || it.civ.getAllyCivName() != civInfo.civName) }
+        val cityToMoveTo = cityStatesToRig.flatMap { it.cities }.filter { !it.isBeingRazed && spy.canMoveTo(it) && (it.civ.getDiplomacyManager(civInfo)!!.getInfluence() < 150 || it.civ.getAllyCiv() != civInfo) }
             .maxByOrNull { it.civ.getDiplomacyManager(civInfo)!!.getInfluence() }
         spy.moveTo(cityToMoveTo)
         return cityToMoveTo != null

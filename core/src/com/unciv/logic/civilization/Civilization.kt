@@ -164,6 +164,8 @@ class Civilization : IsPartOfGameInfoSerialization {
     var diplomacy = HashMap<String, DiplomacyManager>()
     var proximity = HashMap<String, Proximity>()
     val popupAlerts = ArrayList<PopupAlert>()
+    @Transient
+    private var allyCiv: Civilization? = null
     private var allyCivName: String? = null
     var naturalWonders = ArrayList<String>()
 
@@ -272,6 +274,7 @@ class Civilization : IsPartOfGameInfoSerialization {
         toReturn.espionageManager = espionageManager.clone()
         toReturn.victoryManager = victoryManager.clone()
         toReturn.allyCivName = allyCivName
+        toReturn.allyCiv = allyCiv
         for (diplomacyManager in diplomacy.values.map { it.clone() })
             toReturn.diplomacy[diplomacyManager.otherCivName] = diplomacyManager
         toReturn.proximity.putAll(proximity)
@@ -1038,10 +1041,17 @@ class Civilization : IsPartOfGameInfoSerialization {
         moveCapitalTo(newCapital, oldCapital)
     }
 
-    @Readonly fun getAllyCiv(): Civilization? = if (allyCivName == null) null
-        else gameInfo.getCivilization(allyCivName!!)
+    @Readonly fun getAllyCiv(): Civilization? {
+        if (allyCiv == null && allyCivName != null)
+            allyCiv = gameInfo.getCivilization(allyCivName!!)
+        return allyCiv
+    }
     @Readonly fun getAllyCivName() = allyCivName
-    fun setAllyCiv(newAllyName: String?) { allyCivName = newAllyName }
+    fun setAllyCiv(newAllyName: String?) {
+        allyCivName = newAllyName
+        allyCiv = if (newAllyName == null) null
+        else gameInfo.getCivilization(newAllyName)
+    }
 
     /** Determine if this civ (typically as human player) is allowed to know how many major civs there are
      *

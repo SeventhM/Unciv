@@ -129,13 +129,13 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         diplomacyTable.row().padTop(15f)
 
         otherCiv.cityStateFunctions.updateAllyCivForCityState()
-        var ally = otherCiv.getAllyCivName()
+        val ally = otherCiv.getAllyCiv()
         if (ally != null) {
             val allyInfluence = otherCiv.getDiplomacyManager(ally)!!.getInfluence().toInt()
-            if (!viewingCiv.knows(ally) && ally != viewingCiv.civName)
-                ally = "Unknown civilization"
+            val allyName = if (viewingCiv.knows(ally) || ally == viewingCiv) ally.civName
+            else "Unknown civilization"
             diplomacyTable
-                .add("Ally: [$ally] with [$allyInfluence] Influence".toLabel())
+                .add("Ally: [$allyName] with [$allyInfluence] Influence".toLabel())
                 .row()
         }
 
@@ -157,7 +157,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val nextLevelString = when {
             atWar -> ""
             otherCivDiplomacyManager.getInfluence().toInt() < 30 -> "Reach 30 for friendship."
-            ally == viewingCiv.civName -> ""
+            ally == viewingCiv -> ""
             else -> "Reach highest influence above 60 for alliance."
         }
         diplomacyTable.add(diplomacyScreen.getRelationshipTable(otherCivDiplomacyManager)).row()
@@ -265,9 +265,9 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
                 diplomacyScreen.updateRightSide(otherCiv)
             }.open()
         }
-        val cityStatesAlly = otherCiv.getAllyCivName()
+        val cityStatesAlly = otherCiv.getAllyCiv()
         val atWarWithItsAlly = viewingCiv.getKnownCivs()
-            .any { it.civName == cityStatesAlly && it.isAtWarWith(viewingCiv) }
+            .any { it == cityStatesAlly && it.isAtWarWith(viewingCiv) }
         if (diplomacyScreen.isNotPlayersTurn() || atWarWithItsAlly) peaceButton.disable()
 
         if (otherCivDiplomacyManager.hasFlag(DiplomacyFlags.DeclaredWar)) {
