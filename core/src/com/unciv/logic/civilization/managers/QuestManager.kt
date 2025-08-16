@@ -81,12 +81,12 @@ class QuestManager : IsPartOfGameInfoSerialization {
     private var unitsKilledFromCiv: HashMap<String, HashMap<String, Int>> = HashMap()
 
     /** Returns true if [civ] have active quests for [challenger] */
-    @Readonly fun haveQuestsFor(challenger: Civilization): Boolean = getAssignedQuestsFor(challenger.civName).any()
+    @Readonly fun haveQuestsFor(challenger: Civilization): Boolean = getAssignedQuestsFor(challenger).any()
 
-    /** Access all assigned Quests for [civName] */
+    /** Access all assigned Quests for [civ] */
     @Readonly
-    fun getAssignedQuestsFor(civName: String) =
-        assignedQuests.asSequence().filter { it.assignee == civName }
+    fun getAssignedQuestsFor(civ: Civilization) =
+        assignedQuests.asSequence().filter { it.assigneeCiv == civ }
 
     /** Access all assigned Quests of "type" [questName] */
     // Note if we decide to cache an index of these (such as `assignedQuests.groupBy { it.questNameInstance }`), this accessor would simplify the transition
@@ -99,8 +99,8 @@ class QuestManager : IsPartOfGameInfoSerialization {
 
     /** Returns the influence multiplier for [donor] from a Investment quest that [civ] might have (assumes only one) */
     @Readonly
-    fun getInvestmentMultiplier(donor: String): Float {
-        val investmentQuest = getAssignedQuestsOfName(QuestName.Invest).firstOrNull { it.assignee == donor }
+    fun getInvestmentMultiplier(donor: Civilization): Float {
+        val investmentQuest = getAssignedQuestsOfName(QuestName.Invest).firstOrNull { it.assigneeCiv == donor }
             ?: return 1f
         return investmentQuest.data1.toPercent()
     }
@@ -227,7 +227,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
             if (countdown != 0)
                 continue
 
-            if (getAssignedQuestsFor(challenger.civName).count { it.isIndividual() } >= INDIVIDUAL_QUEST_MAX_ACTIVE)
+            if (getAssignedQuestsFor(challenger).count { it.isIndividual() } >= INDIVIDUAL_QUEST_MAX_ACTIVE)
                 continue
 
             val assignableQuests = getQuests { it.isIndividual() && isQuestValid(it, challenger) }
@@ -265,7 +265,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     private fun handleGlobalQuests() {
         // Remove any participants that are no longer valid because of being dead or at war with the CS
         assignedQuests.removeAll { it.isGlobal() &&
-            !canAssignAQuestTo(civ.gameInfo.getCivilization(it.assignee)) }
+            !canAssignAQuestTo(it.assigneeCiv) }
         val globalQuestsExpired = assignedQuests.filter { it.isGlobal() && it.isExpired() }.map { it.questNameInstance }.distinct()
         for (globalQuestName in globalQuestsExpired)
             handleGlobalQuest(globalQuestName)
@@ -286,7 +286,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** If quest is complete, it gives the influence reward to the player.
      *  Returns true if the quest can be removed (is either complete, obsolete or expired) */
     private fun handleIndividualQuest(assignedQuest: AssignedQuest): Boolean {
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
 
         // One of the civs is defeated, or they started a war: remove quest
         if (!canAssignAQuestTo(assignee))
@@ -334,9 +334,9 @@ class QuestManager : IsPartOfGameInfoSerialization {
                 QuestName.FindNaturalWonder -> data1 = getNaturalWonderToFindForQuest(assignee)!!
                 QuestName.ConquerCityState -> data1 = getCityStateTarget(assignee)!!.civName
                 QuestName.BullyCityState -> data1 = getCityStateTarget(assignee)!!.civName
-                QuestName.PledgeToProtect -> data1 = getMostRecentBully()!!
-                QuestName.GiveGold -> data1 = getMostRecentBully()!!
-                QuestName.DenounceCiv -> data1 = getMostRecentBully()!!
+                QuestName.PledgeToProtect -> data1 = getMostRecentBully()!!.civName
+                QuestName.GiveGold -> data1 = getMostRecentBully()!!.civName
+                QuestName.DenounceCiv -> data1 = getMostRecentBully()!!.civName
                 QuestName.SpreadReligion -> {
                     val playerReligion = civ.gameInfo.religions.values
                         .first { it.foundingCivName == assignee.civName && it.isMajorReligion() }  // isQuestValid must have ensured this won't throw
@@ -351,14 +351,14 @@ class QuestManager : IsPartOfGameInfoSerialization {
             }
 
             val newQuest = AssignedQuest(
-                    questName = quest.name,
-                    assigner = civ.civName,
-                    assignee = assignee.civName,
+                    quest = quest,
+                    assigner = civ,
+                    assignee = assignee,
                     assignedOnTurn = turn,
                     data1 = data1,
                     data2 = data2
             )
-            newQuest.setTransients(civ.gameInfo, quest)
+            newQuest.setTransients(civ.gameInfo)
 
             assignedQuests.add(newQuest)
             if (quest.isIndividual())
@@ -382,7 +382,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     private fun isQuestValid(quest: Quest, challenger: Civilization): Boolean {
         if (!canAssignAQuestTo(challenger))
             return false
-        if (getAssignedQuestsOfName(quest.questNameInstance).any { it.assignee == challenger.civName })
+        if (getAssignedQuestsOfName(quest.questNameInstance).any { it.assigneeCiv == challenger })
             return false
         if (quest.isIndividual() && civ.getDiplomacyManager(challenger)!!.hasFlag(DiplomacyFlags.Bullied))
             return false
@@ -422,19 +422,19 @@ class QuestManager : IsPartOfGameInfoSerialization {
     }
 
     @Readonly
-    private fun isDenounceCivQuestValid(challenger: Civilization, mostRecentBully: String?): Boolean {
+    private fun isDenounceCivQuestValid(challenger: Civilization, mostRecentBully: Civilization?): Boolean {
         return mostRecentBully != null
             && challenger.knows(mostRecentBully)
             && !challenger.getDiplomacyManager(mostRecentBully)!!.hasFlag(DiplomacyFlags.Denunciation)
             && challenger.getDiplomacyManager(mostRecentBully)!!.diplomaticStatus != DiplomaticStatus.War
             && !( challenger.playerType == PlayerType.Human
-            && civ.gameInfo.getCivilization(mostRecentBully).playerType == PlayerType.Human)
+            && mostRecentBully.playerType == PlayerType.Human)
     }
 
     /** Returns true if the [assignedQuest] is successfully completed */
     @Readonly
     private fun isComplete(assignedQuest: AssignedQuest): Boolean {
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
         return when (assignedQuest.questNameInstance) {
             QuestName.Route -> assignee.isCapitalConnectedToCity(civ.getCapital()!!)
             QuestName.ConnectResource -> assignee.detailedCivResources.map { it.resource }.contains(ruleset.tileResources[assignedQuest.data1])
@@ -452,7 +452,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** Returns true if the [assignedQuest] request cannot be fulfilled anymore */
     @Readonly
     private fun isObsolete(assignedQuest: AssignedQuest): Boolean {
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
         return when (assignedQuest.questNameInstance) {
             QuestName.ClearBarbarianCamp -> civ.gameInfo.tileMap[assignedQuest.data1.toInt(), assignedQuest.data2.toInt()].improvement != Constants.barbarianEncampment
             QuestName.ConstructWonder -> civ.gameInfo.getCities().any { it.civ != assignee && it.cityConstructions.isBuilt(assignedQuest.data1) }
@@ -467,9 +467,9 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** Increments [assignedQuest.assignee][AssignedQuest.assignee] influence on [civ] and adds a [Notification] */
     private fun giveReward(assignedQuest: AssignedQuest) {
         val rewardInfluence = assignedQuest.getInfluence()
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
 
-        civ.getDiplomacyManager(assignedQuest.assignee)!!.addInfluence(rewardInfluence)
+        civ.getDiplomacyManager(assignedQuest.assigneeCiv)!!.addInfluence(rewardInfluence)
         if (rewardInfluence > 0)
             assignee.addNotification(
                 "[${civ.civName}] rewarded you with [${rewardInfluence.toInt()}] influence for completing the [${assignedQuest.questName}] quest.",
@@ -484,7 +484,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** Notifies the assignee of [assignedQuest] that the quest is now obsolete or expired.
      *  Optionally displays the [winners] of global quests. */
     private fun notifyExpired(assignedQuest: AssignedQuest, winners: List<AssignedQuest> = emptyList()) {
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
         if (winners.isEmpty()) {
             assignee.addNotification(
                     "[${civ.civName}] no longer needs your help with the [${assignedQuest.questName}] quest.",
@@ -501,7 +501,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** Returns the score for the [assignedQuest] */
     @Readonly
     private fun getScoreForQuest(assignedQuest: AssignedQuest): Int {
-        val assignee = civ.gameInfo.getCivilization(assignedQuest.assignee)
+        val assignee = assignedQuest.assigneeCiv
 
         return when (assignedQuest.questNameInstance) {
             //quest total = civ total - the value at the time the quest started (which was stored in assignedQuest.data1)
@@ -558,7 +558,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
      */
     @Readonly
     fun getScoreStringForGlobalQuest(inquiringAssignedQuest: AssignedQuest): String {
-        require(inquiringAssignedQuest.assigner == civ.civName)
+        require(inquiringAssignedQuest.assignerCiv == civ)
         require(inquiringAssignedQuest.isGlobal())
 
         val scoreDescriptor = when (inquiringAssignedQuest.questNameInstance) {
@@ -593,7 +593,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
         val matchingQuests = getAssignedQuestsOfName(QuestName.ClearBarbarianCamp)
                 .filter { it.data1.toInt() == location.x.toInt() && it.data2.toInt() == location.y.toInt() }
 
-        val winningQuest = matchingQuests.filter { it.assignee == civInfo.civName }.firstOrNull()
+        val winningQuest = matchingQuests.filter { it.assigneeCiv == civInfo }.firstOrNull()
         if (winningQuest != null)
             giveReward(winningQuest)
 
@@ -605,7 +605,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
      */
     fun cityStateConquered(cityState: Civilization, attacker: Civilization) {
         val matchingQuests = getAssignedQuestsOfName(QuestName.ConquerCityState)
-            .filter { it.data1 == cityState.civName && it.assignee == attacker.civName }
+            .filter { it.data1 == cityState.civName && it.assigneeCiv == attacker }
 
         for (quest in matchingQuests)
             giveReward(quest)
@@ -618,7 +618,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
      */
     fun cityStateBullied(cityState: Civilization, bully: Civilization) {
         val matchingQuests = getAssignedQuestsOfName(QuestName.BullyCityState)
-            .filter { it.data1 == cityState.civName && it.assignee == bully.civName}
+            .filter { it.data1 == cityState.civName && it.assigneeCiv == bully}
 
         for (quest in matchingQuests)
             giveReward(quest)
@@ -629,7 +629,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
         if (civ != cityState) return
 
         // Revoke most quest types from the bully
-        val revokedQuests = getAssignedQuestsFor(bully.civName)
+        val revokedQuests = getAssignedQuestsFor(bully)
             .filter { it.isIndividual() || it.questNameInstance == QuestName.Invest }
             .toList()
         assignedQuests.removeAll(revokedQuests)
@@ -732,7 +732,7 @@ class QuestManager : IsPartOfGameInfoSerialization {
      */
     fun receivedGoldGift(donorCiv: Civilization) {
         val matchingQuests = getAssignedQuestsOfName(QuestName.GiveGold)
-            .filter { it.assignee == donorCiv.civName }
+            .filter { it.assigneeCiv == donorCiv }
 
         for (quest in matchingQuests)
             giveReward(quest)
@@ -879,48 +879,80 @@ class QuestManager : IsPartOfGameInfoSerialization {
     /** Returns a [Civilization] of the civ that most recently bullied [civ].
      *  Note: forgets after 20 turns has passed! */
     @Readonly
-    private fun getMostRecentBully(): String? {
+    private fun getMostRecentBully(): Civilization? {
         val bullies = civ.diplomacy.values.filter { it.hasFlag(DiplomacyFlags.Bullied) }
-        return bullies.maxByOrNull { it.getFlag(DiplomacyFlags.Bullied) }?.otherCivName
+        return bullies.maxByOrNull { it.getFlag(DiplomacyFlags.Bullied) }?.otherCiv
     }
 
     //endregion
 }
 
 
-class AssignedQuest(
-    val questName: String = "",
-    val assigner: String = "",
-    val assignee: String = "",
-    val assignedOnTurn: Int = 0,
-    val data1: String = "",
-    val data2: String = ""
-) : IsPartOfGameInfoSerialization {
+class AssignedQuest : IsPartOfGameInfoSerialization {
+
+    @Transient
+    lateinit var quest: Quest
+        private set
+    val questName: String
+    @Transient
+    lateinit var assignerCiv: Civilization
+        private set
+    val assigner: String
+    @Transient
+    lateinit var assigneeCiv: Civilization
+        private set
+    val assignee: String
+    val assignedOnTurn: Int
+    val data1: String
+    val data2: String
+
+    constructor(
+        quest: Quest,
+        assigner: Civilization,
+        assignee: Civilization,
+        assignedOnTurn: Int = 0,
+        data1: String = "",
+        data2: String = ""
+    ) {
+        this.quest = quest
+        this.questName = quest.name
+        this.assigner = assigner.civName
+        assignerCiv = assigner
+        this.assignee = assignee.civName
+        assigneeCiv = assignee
+        this.assignedOnTurn = assignedOnTurn
+        this.data1 = data1
+        this.data2 = data2
+    }
 
     @Transient
     private lateinit var gameInfo: GameInfo
 
-    @Transient
-    private lateinit var questObject: Quest
+    val questNameInstance get() = quest.questNameInstance
 
-    val questNameInstance get() = questObject.questNameInstance
-
-    internal fun setTransients(gameInfo: GameInfo, quest: Quest? = null) {
+    internal fun setTransients(gameInfo: GameInfo) {
         this.gameInfo = gameInfo
-        questObject = quest ?: gameInfo.ruleset.quests[questName]!!
+        if (!::quest.isInitialized)
+            this.quest = gameInfo.ruleset.quests[questName]!!
+        if (!::assignerCiv.isInitialized) {
+            this.assignerCiv = gameInfo.getCivilization(assigner)
+        }
+        if (!::assigneeCiv.isInitialized) {
+            this.assigneeCiv = gameInfo.getCivilization(assignee)
+        }
     }
 
     @Readonly fun isIndividual(): Boolean = !isGlobal()
-    @Readonly fun isGlobal(): Boolean = questObject.isGlobal()
+    @Readonly fun isGlobal(): Boolean = quest.isGlobal()
     @Suppress("MemberVisibilityCanBePrivate")
-    @Readonly fun doesExpire(): Boolean = questObject.duration > 0
+    @Readonly fun doesExpire(): Boolean = quest.duration > 0
     @Readonly fun isExpired(): Boolean = doesExpire() && getRemainingTurns() == 0
     @Suppress("MemberVisibilityCanBePrivate")
-    @Readonly fun getDuration(): Int = (gameInfo.speed.modifier * questObject.duration).toInt()
+    @Readonly fun getDuration(): Int = (gameInfo.speed.modifier * quest.duration).toInt()
     @Readonly fun getRemainingTurns(): Int = (assignedOnTurn + getDuration() - gameInfo.turns).coerceAtLeast(0)
-    @Readonly fun getInfluence() = questObject.influence
+    @Readonly fun getInfluence() = quest.influence
 
-    @Readonly fun getDescription(): String = questObject.description.fillPlaceholders(data1)
+    @Readonly fun getDescription(): String = quest.description.fillPlaceholders(data1)
 
     fun onClickAction() {
         when (questNameInstance) {
@@ -930,7 +962,7 @@ class AssignedQuest(
             }
             QuestName.Route -> {
                 GUI.resetToWorldScreen()
-                GUI.getMap().setCenterPosition(gameInfo.getCivilization(assigner).getCapital()!!.location, selectUnit = false)
+                GUI.getMap().setCenterPosition(assignerCiv.getCapital()!!.location, selectUnit = false)
             }
             else -> Unit
         }
