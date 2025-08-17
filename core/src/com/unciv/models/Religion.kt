@@ -19,6 +19,9 @@ class Religion() : INamed, IsPartOfGameInfoSerialization {
     var displayName: String? = null
     lateinit var foundingCivName: String
 
+    @delegate:Transient
+    val foundingCiv by lazy { gameInfo.getCivilization(foundingCivName) }
+
     private var founderBeliefs: HashSet<String> = hashSetOf()
     private var followerBeliefs: HashSet<String> = hashSetOf()
 
@@ -115,8 +118,6 @@ class Religion() : INamed, IsPartOfGameInfoSerialization {
     @Readonly fun isMajorReligion() = getBeliefs(BeliefType.Founder).any()
     @Readonly fun isEnhancedReligion() = getBeliefs(BeliefType.Enhancer).any()
 
-    @Readonly fun getFounder() = gameInfo.getCivilization(foundingCivName)
-
     @Readonly
     fun matchesFilter(filter: String, state: GameContext = GameContext.IgnoreConditionals, civ: Civilization? = null): Boolean {
         return MultiFilter.multiFilter(filter, { matchesSingleFilter(it, state, civ) })
@@ -124,7 +125,6 @@ class Religion() : INamed, IsPartOfGameInfoSerialization {
 
     @Readonly
     private fun matchesSingleFilter(filter: String, state: GameContext = GameContext.IgnoreConditionals, civ: Civilization? = null): Boolean {
-        val foundingCiv = getFounder()
         when (filter) {
             "any" -> return true
             "major" -> return isMajorReligion()
@@ -133,7 +133,7 @@ class Religion() : INamed, IsPartOfGameInfoSerialization {
             "foreign" -> return civ != null && civ != foundingCiv
             "enemy" -> {
                 val known = civ != null && civ.knows(foundingCiv)
-                return known && civ!!.isAtWarWith(foundingCiv)
+                return known && civ.isAtWarWith(foundingCiv)
             }
             else -> {
                 if (filter == name) return true

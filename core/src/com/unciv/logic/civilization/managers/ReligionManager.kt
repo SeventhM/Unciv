@@ -71,12 +71,12 @@ class ReligionManager : IsPartOfGameInfoSerialization {
         // Find our religion from the map of founded religions.
         // First check if there is any major religion
         religion = civInfo.gameInfo.religions.values.firstOrNull {
-            it.foundingCivName == civInfo.civName && it.isMajorReligion()
+            it.foundingCiv == civInfo && it.isMajorReligion()
         }
         // If there isn't, check for just pantheons.
         if (religion != null) return
         religion = civInfo.gameInfo.religions.values.firstOrNull {
-            it.foundingCivName == civInfo.civName
+            it.foundingCiv == civInfo
         }
     }
 

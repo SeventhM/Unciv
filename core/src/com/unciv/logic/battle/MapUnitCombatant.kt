@@ -44,7 +44,7 @@ class MapUnitCombatant(val unit: MapUnit) : ICombatant {
     }
 
     override fun toString(): String {
-        return unit.name+" of "+unit.civ.civName
+        return unit.name + " of " + unit.civ.civName
     }
 
     @Readonly 

@@ -227,7 +227,7 @@ class CityStateFunctions(val civInfo: Civilization) {
         if(!otherCivCanPledgeProtection(otherCiv))
             return
 
-        val diplomacy = civInfo.getDiplomacyManager(otherCiv.civName)!!
+        val diplomacy = civInfo.getDiplomacyManager(otherCiv)!!
         diplomacy.diplomaticStatus = DiplomaticStatus.Protector
         diplomacy.setFlag(DiplomacyFlags.RecentlyPledgedProtection, 10) // Can't break for 10 turns
     }

@@ -200,7 +200,7 @@ class ReligiousBeliefsPickerScreen (
         val availableBeliefs = ruleset.beliefs.values
             .filter { it.type == beliefType || beliefType == BeliefType.Any }
 
-        val civReligionManager = currentReligion.getFounder().religionManager
+        val civReligionManager = currentReligion.foundingCiv.religionManager
 
         for (belief in availableBeliefs) {
             val beliefButton = getBeliefButton(belief)
