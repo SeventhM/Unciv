@@ -97,7 +97,7 @@ class CityConquestFunctions(val city: City) {
         conqueringCiv.addNotification("Received [$goldPlundered] Gold for capturing [${city.name}]",
             city.getCenterTile().position, NotificationCategory.General, NotificationIcon.Gold)
 
-        val reconqueredCityWhileStillInResistance = city.previousOwner == receivingCiv.civName && city.isInResistance()
+        val reconqueredCityWhileStillInResistance = city.previousOwnerObject == receivingCiv && city.isInResistance()
 
         destroyBuildingsOnCapture()
 
@@ -112,7 +112,7 @@ class CityConquestFunctions(val city: City) {
             city.population.addPopulation(-1 - city.population.population / 4) // so from 2-4 population, remove 1, from 5-8, remove 2, etc.
         city.reassignAllPopulation()
 
-        if (!reconqueredCityWhileStillInResistance && city.foundingCiv != receivingCiv.civName) {
+        if (!reconqueredCityWhileStillInResistance && city.foundingCivObject != receivingCiv) {
             // add resistance
             // I checked, and even if you puppet there's resistance for conquering
             city.setFlag(CityFlags.Resistance, city.population.population)
@@ -186,7 +186,7 @@ class CityConquestFunctions(val city: City) {
             return
         }
 
-        val foundingCiv = city.civ.gameInfo.getCivilization(city.foundingCiv)
+        val foundingCiv = city.foundingCivObject!!
         if (foundingCiv.isDefeated()) // resurrected civ
             for (diploManager in foundingCiv.diplomacy.values)
                 if (diploManager.diplomaticStatus == DiplomaticStatus.War)
@@ -229,7 +229,7 @@ class CityConquestFunctions(val city: City) {
 
 
     private fun diplomaticRepercussionsForLiberatingCity(conqueringCiv: Civilization, conqueredCiv: Civilization) {
-        val foundingCiv = conqueredCiv.gameInfo.civilizations.first { it.civName == city.foundingCiv }
+        val foundingCiv = city.foundingCivObject!!
         val percentageOfCivPopulationInThatCity = city.population.population *
                 100f / (foundingCiv.cities.sumOf { it.population.population } + city.population.population)
         val respectForLiberatingOurCity = 10f + percentageOfCivPopulationInThatCity.roundToInt()

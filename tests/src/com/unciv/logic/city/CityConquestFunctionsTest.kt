@@ -50,7 +50,7 @@ class CityConquestFunctionsTest {
 
         // then
         assertEquals(attackerCiv, defenderCity.civ)
-        assertEquals(defenderCiv.civName, defenderCity.previousOwner)
+        assertEquals(defenderCiv, defenderCity.previousOwnerObject)
     }
 
     @Test

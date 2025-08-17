@@ -190,8 +190,8 @@ class AlertPopup(
         val conqueringCiv = gameInfo.getCurrentPlayerCivilization()
 
         if (city.foundingCiv != ""
-                && city.civ.civName != city.foundingCiv // can't liberate if the city actually belongs to those guys
-                && conqueringCiv.civName != city.foundingCiv) { // or belongs originally to us
+                && city.civ != city.foundingCivObject // can't liberate if the city actually belongs to those guys
+                && conqueringCiv != city.foundingCivObject) { // or belongs originally to us
             addLiberateOption(city, conqueringCiv)
             addSeparator()
         }
@@ -231,7 +231,7 @@ class AlertPopup(
         addQuestionAboutTheCity(city.name)
         val conqueringCiv = gameInfo.getCurrentPlayerCivilization()
 
-        if (!conqueringCiv.isAtWarWith(getCiv(city.foundingCiv))) {
+        if (!conqueringCiv.isAtWarWith(city.foundingCivObject!!)) {
             addLiberateOption(city, conqueringCiv)
             addSeparator()
         }

@@ -261,8 +261,8 @@ class BattleTest {
 
         // then
         assertEquals(attackerCiv, defenderCity.civ)
-        assertEquals(defenderCiv.civName, defenderCity.previousOwner)
-        assertEquals(defenderCiv.civName, defenderCity.foundingCiv)
+        assertEquals(defenderCiv, defenderCity.previousOwnerObject)
+        assertEquals(defenderCiv, defenderCity.foundingCivObject)
     }
 
     @Test
