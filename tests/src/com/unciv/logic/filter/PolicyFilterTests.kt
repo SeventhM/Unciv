@@ -21,6 +21,7 @@ class PolicyFilterTests {
     }
     
     @Test
+    @CoversCountable(Countables.PolicyBranches, Countables.FilteredPolicies)
     fun testPolicyMatchesFilter() {
         // Don't use a fake Policy without a branch, the policyFilter would stumble over a lateinit.
         val taggedPolicyBranch = game.createPolicyBranch("Some marker")

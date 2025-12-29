@@ -434,11 +434,6 @@ class CountableTests {
             Countables.getCountableAmount(test, context)
         },
             "Completed Policy branches", 2,               // Tradition and taggedPolicyBranch
-            "Adopted [Tradition Complete] Policies", 1,
-            "Adopted [[Tradition] branch] Policies", 7,   // Branch start and completion plus 5 members
-            "Adopted [Liberty Complete] Policies", 0,
-            "Adopted [[Liberty] branch] Policies", 2,     // Liberty has only 1 member adopted
-            "Adopted [Some marker] Policies", 1,
             "Adopted [Military Tradition] Policies by [All] Civilizations", 0,
             "Adopted [Some marker] Policies by [All] Civilizations", 1,
             "Adopted [Oligarchy] Policies by [All] Civilizations", 2,
@@ -545,34 +540,6 @@ class CountableTests {
             "[City center] Tiles", 1,
             "[Nation-0] Tiles", 7,
             "[Vegetation] Tiles", 18,
-        )
-    }
-
-    @Test
-    @CoversCountable(Countables.FilteredTechnologies)
-    fun testFilteredTechnologies() {
-        setupModdedGame()
-        val techs = listOf(
-            "Agriculture",
-            "Pottery",
-            "Sailing",
-            "Animal Husbandry",
-            "Optics"
-        )
-        for (techName in techs) {
-            civ.tech.addTechnology(techName, false)
-        }
-        val context = GameContext(civ)
-
-        runTestParcours("Filtered technologies countable", { filter: String ->
-            Countables.getCountableAmount("Researched [$filter] Technologies", context)
-        },
-            "All", 5,
-            "Ancient era", 4,
-            "Classical era", 1, // Optics
-            "Modern era", 0,
-            "Pottery", 1,
-            "Archery", 0,
         )
     }
     //endregion

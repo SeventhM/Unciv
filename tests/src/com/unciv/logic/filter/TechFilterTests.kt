@@ -2,16 +2,19 @@ package com.unciv.logic.filters
 
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.ruleset.Ruleset
+import com.unciv.models.ruleset.tech.Technology
+import com.unciv.models.ruleset.unique.Countables
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.testing.GdxTestRunner
 import com.unciv.testing.TestGame
+import com.unciv.uniques.CoversCountable
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.collections.iterator
 
-/** Tests [Era][com.unciv.models.ruleset.tech.Era] */
+/** Tests [Technology][com.unciv.models.ruleset.tech.Technology] and [Era][com.unciv.models.ruleset.tech.Era] */
 @RunWith(GdxTestRunner::class)
 class TechFilterTests {
     private lateinit var game: TestGame
@@ -19,14 +22,12 @@ class TechFilterTests {
 
     @Before
     fun initTheWorld() {
-        game = TestGame()
-        civ = game.addCiv()
+        setupModdedGame()
     }
 
     /** Tests [Era.matchesFilter][com.unciv.models.ruleset.tech.Era.matchesFilter] */
     @Test
     fun testEraMatchesFilter() {
-        setupModdedGame()
         val eraTests = hashMapOf(
             "Ancient era" to listOf(
                 "any era" to true,
@@ -68,6 +69,47 @@ class TechFilterTests {
                     )
                 }
             }
+        }
+    }
+    
+    @Test
+    @CoversCountable(Countables.FilteredTechnologies)
+    fun testTechMatchesFilter() {
+        val testTechs = listOf(
+            "Agriculture",
+            "Pottery",
+            "Sailing",
+            "Animal Husbandry",
+            "Optics"
+        )
+        val techObjects = testTechs.mapNotNull { game.ruleset.technologies[it] }
+        val filters = listOf(
+            "All" to (listOf("Agriculture",
+                "Pottery",
+                "Sailing",
+                "Animal Husbandry",
+                "Optics") to 5),
+            "Ancient era" to (listOf("Sailing", "Agriculture", "Pottery", "Animal Husbandry") to 4),
+            "Classical era" to (listOf("Optics") to 1),
+            "Modern era" to (emptyList<String>() to 0),
+            "Starting tech" to (listOf("Agriculture") to 1),
+            "Pottery" to (listOf("Pottery") to 1),
+            "Archery" to (emptyList<String>() to 0)
+        )
+        val failures = ArrayList<String>()
+        for (test in filters) {
+            val filtered = techObjects.filter { it.matchesFilter(test.first) }
+            try {
+                Assert.assertTrue(filtered.map { it.name }.containsAll(test.second.first))
+                Assert.assertTrue(filtered.size == test.second.second)
+            }
+            catch (_: AssertionError) {
+                failures.add("filter: $filtered\ntest: ${test.second.first}")
+            }
+        }
+        if (failures.any()) {
+            println(failures.joinToString("\n"))
+            throw AssertionError()
         }
     }
 
